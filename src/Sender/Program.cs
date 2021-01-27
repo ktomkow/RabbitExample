@@ -7,6 +7,8 @@ namespace Sender
     {
         static void Main(string[] args)
         {
+            string senderName;
+
             QueueSettings settings = new QueueSettings()
             {
                 Queue = "LittleRabbit",
@@ -24,7 +26,9 @@ namespace Sender
 
             string input;
 
-            Console.WriteLine("Hello, write a message to send it to the queue");
+            Console.Write("Please introduce yourself: ");
+            senderName = Console.ReadLine();
+            Console.WriteLine($"Hello {senderName}, write a message to send it to the queue");
             Console.WriteLine("Type q to quit");
 
             while(true)
@@ -36,7 +40,7 @@ namespace Sender
                     break;
                 }
 
-                sender.Send(input);
+                sender.Send(input, senderName);
             } 
 
             Console.WriteLine("Ok, I'm done.");

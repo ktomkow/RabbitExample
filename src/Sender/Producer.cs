@@ -28,7 +28,7 @@ namespace Sender
             this.credentials = queueSettings.Credentials;
         }
 
-        public void Send(string text)
+        public void Send(string text, string sender)
         {
             ConnectionFactory factory = new ConnectionFactory();
 
@@ -43,7 +43,7 @@ namespace Sender
             channel.QueueDeclare(this.queueName, isQueueDurable, false, false, null);
             channel.QueueBind(this.queueName, this.exchangeName, this.routingKey, null);
 
-            var payload = this.Convert(text);
+            var payload = this.Convert($"{sender} says {text}");
 
             IBasicProperties props = channel.CreateBasicProperties();
             props.ContentType = "text/plain";
