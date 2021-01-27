@@ -1,10 +1,13 @@
 ﻿using RabbitMQ.Client;
+using RabbitMQ.Client.Events;
 using Settings;
 using System;
+using System.Text;
+using System.Threading.Tasks;
 
-namespace Sender
+namespace Receiver
 {
-    public class Producer
+    public class ReceiverWorker
     {
         private readonly string queueName;
         private readonly string exchangeName;
@@ -13,9 +16,9 @@ namespace Sender
 
         private readonly QueueCredentials credentials;
 
-        public Producer(QueueSettings queueSettings)
+        public ReceiverWorker(QueueSettings queueSettings)
         {
-            if(queueSettings is null)
+            if (queueSettings is null)
             {
                 throw new ArgumentNullException(nameof(queueSettings));
             }
@@ -28,36 +31,35 @@ namespace Sender
             this.credentials = queueSettings.Credentials;
         }
 
-        public void Send(string text)
+        public void Work()
         {
             ConnectionFactory factory = new ConnectionFactory();
 
             factory.Uri = new Uri($"amqp://{this.credentials.User}:{this.credentials.Password}@{this.brokerAddress}");
+            factory.DispatchConsumersAsync = true;
 
             IConnection conn = factory.CreateConnection();
             IModel channel = conn.CreateModel();
 
-            channel.ExchangeDeclare(this.exchangeName, ExchangeType.Direct);
+            var consumer = new AsyncEventingBasicConsumer(channel);
 
-            bool isQueueDurable = false;
-            channel.QueueDeclare(this.queueName, isQueueDurable, false, false, null);
-            channel.QueueBind(this.queueName, this.exchangeName, this.routingKey, null);
+            consumer.Received += async (ch, deliverEventArgs) =>
+            {
+                byte[] body = deliverEventArgs.Body.ToArray();
+                string result = Encoding.UTF8.GetString(body);
 
-            var payload = this.Convert(text);
+                Console.WriteLine(result);
 
-            IBasicProperties props = channel.CreateBasicProperties();
-            props.ContentType = "text/plain";
-            props.DeliveryMode = 2;
-            channel.BasicPublish(this.exchangeName, this.routingKey, props, payload);
+                channel.BasicAck(deliverEventArgs.DeliveryTag, false);
+                await Task.Yield();
+            };
 
-            channel.Close();
-            conn.Close();
-        }
+            string consumerTag = channel.BasicConsume(queueName, false, consumer);
 
-        private byte[] Convert(string text)
-        {
-            byte[] messageBodyBytes = System.Text.Encoding.UTF8.GetBytes(text);
-            return messageBodyBytes;
+            Console.ReadLine();
+
+            //channel.Close();
+            //conn.Close();
         }
     }
 }

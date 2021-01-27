@@ -1,4 +1,4 @@
-﻿namespace Sender
+﻿namespace Settings
 {
     public class QueueCredentials
     {
